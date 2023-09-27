@@ -21,6 +21,56 @@ static const char ESPxWebFlMgrWpindexpage[] PROGMEM = R"==x==(
     <script src="/gzipper.js"></script>  
   </head>
   <body class="background">
+
+    <script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const viewer = urlParams.get("viewer");
+  if (viewer === "on") document.querySelector("body").style.display = "none";
+
+  const intervalID = setInterval(() => {
+    const $files = Array.from(document.querySelectorAll(".ccl"));
+
+    const files = $files
+      .map(($file) => $file?.innerText?.trim())
+      .filter((file) => file?.endsWith(".avi"))
+      .filter((val) => val)
+      .sort((prev, next) => {
+        prev = prev.replace('desklens', '')
+        next = next.replace('desklens', '')
+
+        const prev_values = prev.split('.')
+        const next_values = next.split('.')
+
+        const prev_n1 = Number(prev_values[0])
+        const prev_n2 = Number(prev_values[1])
+        const next_n1 = Number(next_values[0])
+        const next_n2 = Number(next_values[1])
+
+        if(prev_n1 > next_n1) return 1
+        else if(prev_n1 === next_n1) {
+          if(prev_n2 >= next_n2) return 1
+          else return 0
+        }else {
+          return 0
+        }
+
+      }).sort()
+      .slice(-10)
+
+    if (!files.length) return;
+    const filesParam = "files=" + files.join(",");
+
+    const viewerURL = "http://192.168.4.1/viewer";
+    const redirectURL = viewerURL + "?" + filesParam;
+
+    clearInterval(intervalID);
+
+    console.log(redirectURL);
+    if (viewer === "on") window.location.replace(redirectURL);
+  }, 500);
+</script>
+
+
     <div id="gc">
         <div class="o1">&nbsp;</div>
         <div class="o2">&nbsp;</div>

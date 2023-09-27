@@ -121,10 +121,10 @@ String TIMEZONE = "GMT0BST,M3.5.0/01,M10.5.0/02";
 
 int framesize = FRAMESIZE_HD;
 int quality = 12;
-int framesizeconfig = FRAMESIZE_UXGA;
+int framesizeconfig = FRAMESIZE_HD;
 int qualityconfig = 5;
 int buffersconfig = 3;
-int avi_length = 1800;            // how long a movie in seconds -- 1800 sec = 30 min
+int avi_length = 360;            // how long a movie in seconds -- 1800 sec = 30 min
 int frame_interval = 0;          // record at full speed
 int speed_up_factor = 1;          // play at realtime
 int stream_delay = 500;           // minimum of 500 ms delay between frames
@@ -595,15 +595,15 @@ void read_config_file() {
   String junk;
 
   String cname = "desklens";
-  int cframesize = 11;
-  int cquality = 12;
-  int cframesizeconfig = 13;
+  int cframesize = FRAMESIZE_HD;
+  int cquality = 8;
+  int cframesizeconfig = FRAMESIZE_HD;
   int cqualityconfig = 5;
   int cbuffersconfig = 4; //58.9
-  int clength = 1800;
-  int cinterval = 0;
+  int clength = 360;
+  int cinterval = 50;
   int cspeedup = 1;
-  int cstreamdelay = 0;
+  int cstreamdelay = 200;
   int cinternet = 0;
   String czone = "GMT";
   cssid = "ap";
@@ -728,16 +728,19 @@ void listDir( const char * dirname, uint8_t levels) {
 void delete_old_stuff() {
 
   Serial.printf("Total space: %lluMB\n", SD_MMC.totalBytes() / (1024 * 1024));
-  Serial.printf("Used space: %lluMB\n", SD_MMC.usedBytes() / (1024 * 1024));
+  uint64_t baseUsedMB = 1815;
+  uint64_t usedMB =  SD_MMC.usedBytes() / (1024 * 1024);
+  Serial.printf("Used space: %lluMB\n", (usedMB - baseUsedMB));
+  Serial.printf("Base used space: %lluMB\n", baseUsedMB);
 
   //listDir( "/", 0);
 
-  float full = 1.0 * SD_MMC.usedBytes() / SD_MMC.totalBytes();;
-  if (full  <  0.8) {
+  float full = 1.0 * SD_MMC.usedBytes() / SD_MMC.totalBytes();
+  if ((usedMB - baseUsedMB) < 70) {
     Serial.printf("Nothing deleted, %.1f%% disk full\n", 100.0 * full);
   } else {
     Serial.printf("Disk is %.1f%% full ... deleting oldest file\n", 100.0 * full);
-    while (full > 0.8) {
+    while ((usedMB - baseUsedMB) >= 70) {
 
       double del_number = 999999999;
       char del_numbername[50];
@@ -773,14 +776,21 @@ void delete_old_stuff() {
       if (del_number < 999999999) {
         deleteFolderOrFile(del_numbername);
       }
+
       full = 1.0 * SD_MMC.usedBytes() / SD_MMC.totalBytes();
       Serial.printf("Disk is %.1f%% full ... \n", 100.0 * full);
+
+      usedMB =  SD_MMC.usedBytes() / (1024 * 1024);
+      Serial.printf("After delete file: Used space: %lluMB\n", (usedMB - baseUsedMB));
+
       f.close();
     }
   }
 }
 
 void deleteFolderOrFile(const char * val) {
+  if(String(val) == "config.txt" ) return;
+
   // Function provided by user @gemi254
   Serial.printf("Deleting : %s\n", val);
   File f = SD_MMC.open("/" + String(val));
@@ -1386,7 +1396,7 @@ bool init_wifi() {
     WiFi.disconnect(true, true);
     //WiFi.mode(WIFI_STA);  // https://github.com/espressif/arduino-esp32/issues/6086
     WiFi.setHostname(devname);
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_STA);   
     char ssidch[20];
     char passch[20];
     cssid.toCharArray(ssidch, cssid.length() + 1);
@@ -1730,43 +1740,27 @@ static esp_err_t photos_handler(httpd_req_t *req) {
   time(&now);
   const char *strdate = ctime(&now);
 
-  const char msg[] PROGMEM = R"rawliteral(<!doctype html>
-<html>
+  const char msg[] PROGMEM = R"rawliteral(<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>%s ESP32-CAM Video Recorder Junior</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Document</title>
 </head>
 <body>
-<h1>%s<br>ESP32-CAM Video Recorder Junior %s <br><font color="red">%s</font></h1><br>
- <br>
- One photo every 3 seconds for 30 seconds - roll forward or back - refresh for more live photos
- <br>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const filesRaw = urlParams.get('files');
+        const files = filesRaw?.split(',')
 
-<br><div id="image-container"></div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  var c = document.location.origin;
-  const ic = document.getElementById('image-container');  
-  var i = 1;
-  
-  var timing = 3000; // time between snapshots for multiple shots
+        console.log(files);
 
-  function loop() {
-    ic.insertAdjacentHTML('beforeend','<img src="'+`${c}/capture?_cb=${Date.now()}`+'">')
-    ic.insertAdjacentHTML('beforeend','<br>')
-    ic.insertAdjacentHTML('beforeend',Date())
-    ic.insertAdjacentHTML('beforeend','<br>')
+        const downLoadUrl = "http://192.168.4.1:8080/c?dwn=/"+files[0]
+        console.log(downLoadUrl);
+        // Example capture: http://192.168.4.1/capture?_cb=1695540054943
 
-    i = i + 1;
-    if ( i <= 10 ) {             // 10 frames
-      window.setTimeout(loop, timing);
-    }
-  }
-  loop();
-  
-})
-</script><br>
+    </script>
 </body>
 </html>)rawliteral";
 
@@ -2291,7 +2285,7 @@ void startCameraServer() {
   //  };
 
   httpd_uri_t photos_uri = {
-    .uri       = "/photos",
+    .uri       = "/viewer",
     .method    = HTTP_GET,
     .handler   = photos_handler,
     .user_ctx  = NULL
@@ -2823,5 +2817,11 @@ void loop() {
     filemgr.handleClient();  //v56
   }
   delay(200);
+
+}
+
+void custom_loop() {
+  
+  
 
 }
