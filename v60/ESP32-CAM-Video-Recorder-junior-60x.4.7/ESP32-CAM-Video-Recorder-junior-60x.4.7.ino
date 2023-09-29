@@ -96,6 +96,29 @@ Global variables use 59164 bytes (18%) of dynamic memory, leaving 268516 bytes f
 
 */
 
+// CUSTOM VARS
+#include "custom.h"
+#define LED_FLASH 4
+bool IMPACT;
+bool IMPACT_RECORDED;
+// ========= JSON Data =========
+// temp
+String JSON_TEMP = "";
+// ax
+String JSON_AX = "";
+// ay
+String JSON_AY = "";
+// az
+String JSON_AZ = "";
+// gx
+String JSON_GX = "";
+// gy
+String JSON_GY = "";
+// gz
+String JSON_GZ = "";
+// impact
+String JSON_IMPACT = "";
+
 //#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 #include "esp_log.h"
 #include "esp_http_server.h"
@@ -1741,30 +1764,148 @@ static esp_err_t photos_handler(httpd_req_t *req) {
   const char *strdate = ctime(&now);
 
   const char msg[] PROGMEM = R"rawliteral(<!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Document</title>
-</head>
+<style type="text/css">
+@font-face {
+  font-weight: 400;
+  font-style:  normal;
+  font-family: circular;
+
+  src: url('chrome-extension://liecbddmkiiihnedobmlmillhodjkdmb/fonts/CircularXXWeb-Book.woff2') format('woff2');
+}
+
+@font-face {
+  font-weight: 700;
+  font-style:  normal;
+  font-family: circular;
+
+  src: url('chrome-extension://liecbddmkiiihnedobmlmillhodjkdmb/fonts/CircularXXWeb-Bold.woff2') format('woff2');
+}</style></head>
 <body>
+
+    <header>
+        <div>
+            <h1>Kar<span>T</span>rac</h1>
+            <hr>
+        </div>
+        
+        <h2>Videos grabados</h2>
+        <ul class="videos">    
+        </ul>
+    </header>
+
+    
+
+    <style>
+        * {
+            font-family: Helvetica;
+        }
+
+        body{
+            background-color: #004AAD;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        hr {
+            /* margin: 0; */
+            width: 200px;
+            color: #004AAD;
+            border-color: #004AAD;;
+        }
+
+        header {
+            width: 1200px;
+            margin: 0 auto;
+            max-width: 1000px;
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            background-color: whitesmoke;
+        }
+
+        h1 span {
+            color: #004AAD; 
+        }
+
+        ul {
+            margin-left: -30px;
+        }
+
+        ul li {
+            list-style: none;
+            
+            margin: 10px 0;
+            transition: all 0.3s ease-in-out;
+        }
+
+        ul li:hover{
+            transform: scale(1.1);
+        }
+
+    </style>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const filesRaw = urlParams.get('files');
         const files = filesRaw?.split(',')
 
         console.log(files);
+        const now = new Date()
+
+        const videos = document.querySelector('.videos');
+        for (const [idx, file] of files.entries()) {
+            const video = document.createElement('li')
+            const link = document.createElement('a')
+            link.textContent = `Video ${idx+1} ${file}`
+            link.href = `http://192.168.4.1:8080/c?dwn=/${file}`
+            video.appendChild(link)
+            videos.appendChild(video)
+        }
 
         const downLoadUrl = "http://192.168.4.1:8080/c?dwn=/"+files[0]
         console.log(downLoadUrl);
         // Example capture: http://192.168.4.1/capture?_cb=1695540054943
 
-    </script>
-</body>
-</html>)rawliteral";
+    </script>)rawliteral";
 
-  sprintf(the_page, msg, devname, devname, vernum, strdate );
+  char JSON_TEMP_CHARS[JSON_TEMP.length() + 1];
+  char JSON_AX_CHARS[JSON_AX.length() + 1];
+  char JSON_AY_CHARS[JSON_AY.length() + 1];
+  char JSON_AZ_CHARS[JSON_AZ.length() + 1];
+  char JSON_GX_CHARS[JSON_GX.length() + 1];
+  char JSON_GY_CHARS[JSON_GY.length() + 1];
+  char JSON_GZ_CHARS[JSON_GZ.length() + 1];
+  char JSON_IMPACT_CHARS[JSON_IMPACT.length() + 1];
+
+  // TO CHAR ARRAY
+  JSON_TEMP.toCharArray(JSON_TEMP_CHARS, JSON_TEMP.length() + 1);
+  JSON_AX.toCharArray(JSON_AX_CHARS, JSON_AX.length() + 1);
+  JSON_AY.toCharArray(JSON_AY_CHARS, JSON_AY.length() + 1);
+  JSON_AZ.toCharArray(JSON_AZ_CHARS, JSON_AZ.length() + 1);
+  JSON_GX.toCharArray(JSON_GX_CHARS, JSON_GX.length() + 1);
+  JSON_GY.toCharArray(JSON_GY_CHARS, JSON_GY.length() + 1);
+  JSON_GZ.toCharArray(JSON_GZ_CHARS, JSON_GZ.length() + 1);
+  JSON_IMPACT.toCharArray(JSON_IMPACT_CHARS, JSON_IMPACT.length() + 1);
+
+
+  sprintf(the_page, msg, 
+  JSON_TEMP_CHARS,
+  JSON_AX_CHARS,
+  JSON_AY_CHARS,
+  JSON_AZ_CHARS,
+  JSON_GX_CHARS,
+  JSON_GY_CHARS,
+  JSON_GZ_CHARS,
+  JSON_IMPACT_CHARS
+);
 
   httpd_resp_send(req, the_page, strlen(the_page));
   time_in_web1 += (millis() - start);
@@ -2354,15 +2495,17 @@ void delete_old_stuff();
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void setup() {
+  IMPACT = false;
+  IMPACT_RECORDED = false;
 
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("\n\n---");
 
   pinMode(33, OUTPUT);             // little red led on back of chip
   digitalWrite(33, LOW);           // turn on the red LED on the back of chip
 
   pinMode(4, OUTPUT);               // Blinding Disk-Avtive Light
-  digitalWrite(4, LOW);             // turn off
+  digitalWrite(LED_FLASH, LOW);             // turn off
 
   pinMode(12, INPUT_PULLUP);        // pull this down to stop recording
   pinMode(13, INPUT_PULLUP);        // pull this down switch wifi
@@ -2528,6 +2671,14 @@ void setup() {
   digitalWrite(33, HIGH);         // red light turns off when setup is complete
 
   Serial.println("  End of setup()\n\n");
+  // Blink FLASH LED
+  digitalWrite(LED_FLASH, HIGH);
+  delay(100);
+  digitalWrite(LED_FLASH, LOW);
+  delay(100);
+  digitalWrite(LED_FLASH, HIGH);
+  delay(100);
+  digitalWrite(LED_FLASH, LOW);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2572,7 +2723,7 @@ void the_camera_loop (void* pvParameter) {
     // if (frame_cnt > 0 && start_record != 0)   // another frame
 
     ///////////////////  NOTHING TO DO //////////////////
-    if (frame_cnt == 0 && start_record == 0) {
+    if ((IMPACT && IMPACT_RECORDED) || frame_cnt == 0 && start_record == 0) {
 
       // Serial.println("Do nothing");
       if (we_are_already_stopped == 0) Serial.println("\n\nDisconnect Pin 12 from GND to start recording.\n\n");
@@ -2654,6 +2805,7 @@ void the_camera_loop (void* pvParameter) {
       logfile.printf("End the avi at %d.  It was %d frames, %d ms at %.2f fps...\n", millis(), frame_cnt, avi_end_time, avi_end_time - avi_start_time, fps);
 
       if (!reboot_now) frame_cnt = 0;             // start recording again on the next loop
+      if(IMPACT) IMPACT_RECORDED = true;
 
       ///////////////////  ANOTHER FRAME  //////////////////
     } else if (frame_cnt > 0 && start_record != 0) {  // another frame of the avi
@@ -2739,6 +2891,8 @@ void loop() {
     else start_record = 0;
   }
 
+  custom_loop();
+
   int read13 = digitalRead(13);
   delay(20);
   read13 = read13 + digitalRead(13);  // get 2 opinions to help poor soldering
@@ -2820,8 +2974,3 @@ void loop() {
 
 }
 
-void custom_loop() {
-  
-  
-
-}
