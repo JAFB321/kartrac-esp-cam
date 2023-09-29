@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Document</title>
+<style type="text/css">
+@font-face {
+  font-weight: 400;
+  font-style:  normal;
+  font-family: circular;
+
+  src: url('chrome-extension://liecbddmkiiihnedobmlmillhodjkdmb/fonts/CircularXXWeb-Book.woff2') format('woff2');
+}
+
+@font-face {
+  font-weight: 700;
+  font-style:  normal;
+  font-family: circular;
+
+  src: url('chrome-extension://liecbddmkiiihnedobmlmillhodjkdmb/fonts/CircularXXWeb-Bold.woff2') format('woff2');
+}</style></head>
+<body>
+
+    <header>
+        <div>
+            <h1>Kar<span>T</span>rac</h1>
+            <hr>
+        </div>
+        
+        <h2>Videos grabados</h2>
+        <ul class="videos">    
+        </ul>
+    </header>
+
+    
+
+    <style>
+        * {
+            font-family: Helvetica;
+        }
+
+        body{
+            background-color: #004AAD;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        hr {
+            /* margin: 0; */
+            width: 200px;
+            color: #004AAD;
+            border-color: #004AAD;;
+        }
+
+        header {
+            width: 1200px;
+            margin: 0 auto;
+            max-width: 1000px;
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            background-color: whitesmoke;
+        }
+
+        h1 span {
+            color: #004AAD; 
+        }
+
+        ul {
+            margin-left: -30px;
+        }
+
+        ul li {
+            list-style: none;
+            
+            margin: 10px 0;
+            transition: all 0.3s ease-in-out;
+        }
+
+        ul li:hover{
+            transform: scale(1.1);
+        }
+
+    </style>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const filesRaw = urlParams.get('files');
+        const files = filesRaw?.split(',')
+
+        console.log(files);
+        const now = new Date()
+
+        const videos = document.querySelector('.videos');
+        for (const [idx, file] of files.entries()) {
+            const video = document.createElement('li')
+            const link = document.createElement('a')
+            link.textContent = `Video ${idx+1} ${file}`
+            link.href = `http://192.168.4.1:8080/c?dwn=/${file}`
+            video.appendChild(link)
+            videos.appendChild(video)
+        }
+
+        const downLoadUrl = "http://192.168.4.1:8080/c?dwn=/"+files[0]
+        console.log(downLoadUrl);
+        // Example capture: http://192.168.4.1/capture?_cb=1695540054943
+
+    </script>
