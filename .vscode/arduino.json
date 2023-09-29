@@ -1,5 +1,5 @@
 {
-    "sketch": "v60/ESP32-CAM-Video-Recorder-junior-60x.4.7/ESP32-CAM-Video-Recorder-junior-60x.4.7.ino",
+    "sketch": "kartrac-es-cam/kartrac-es-cam.ino",
     "configuration": "PartitionScheme=huge_app,FlashMode=qio,FlashFreq=80,UploadSpeed=921600,DebugLevel=none,EraseFlash=none",
     "board": "esp32:esp32:esp32wrover",
     "programmer": "esptool",
